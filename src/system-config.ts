@@ -14,6 +14,10 @@ const map: any = {
 
 /** User packages configuration. */
 const packages: any = {
+  'angular2-google-maps/core': {
+    defaultExtension: 'js',
+    main: 'index.js'
+  }
 };
 
 const materialPkgs:string[] = [
