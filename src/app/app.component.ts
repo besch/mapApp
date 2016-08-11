@@ -1,4 +1,6 @@
 import { Component } from '@angular/core';
+import { MapComponent } from './map/index';
+// import { MapComponent } from './map/map.component';
 
 @Component({
   moduleId: module.id,
