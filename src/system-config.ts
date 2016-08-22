@@ -54,6 +54,9 @@ const barrels: string[] = [
   'app',
   'app/shared',
   'app/map',
+  'app/map/info-window',
+  'app/info-window',
+  'app/marker',
   /** @cli-barrel */
 ];
 

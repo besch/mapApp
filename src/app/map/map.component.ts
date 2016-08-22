@@ -6,18 +6,20 @@ import {
   NoOpMapsAPILoader,
   MouseEvent,
   GOOGLE_MAPS_PROVIDERS,
-  GOOGLE_MAPS_DIRECTIVES
+  GOOGLE_MAPS_DIRECTIVES,
+  // SebmGoogleMap, SebmGoogleMapMarker, SebmGoogleMapInfoWindow
 } from 'angular2-google-maps/core';
 
-import { MD_CARD_DIRECTIVES } from '@angular2-material/card';
-import { MD_BUTTON_DIRECTIVES } from '@angular2-material/button';
+// import { MD_CARD_DIRECTIVES } from '@angular2-material/card';
+// import { MD_BUTTON_DIRECTIVES } from '@angular2-material/button';
 
 @Component({
   moduleId: module.id,
   selector: 'app-map',
-  directives: [GOOGLE_MAPS_DIRECTIVES, MD_CARD_DIRECTIVES, MD_BUTTON_DIRECTIVES],
+  // directives: [GOOGLE_MAPS_DIRECTIVES, MD_CARD_DIRECTIVES, MD_BUTTON_DIRECTIVES],
+  directives: [GOOGLE_MAPS_DIRECTIVES],
   templateUrl: 'map.component.html',
-  styleUrls: ['map.component.less']
+  styleUrls: ['map.component.css']
 })
 export class MapComponent implements OnInit {
   // google maps zoom level
@@ -66,6 +68,7 @@ export class MapComponent implements OnInit {
   constructor() { }
 
   ngOnInit() {
+    console.log('Map component initialized');
   }
 
 }
