@@ -50,6 +50,7 @@
       <p>Total Distance: <span id="total"></span></p>
     </div>
     <button id="redrawButton">Redraw</button>
+    <button id="clearMarkers">Clear markers</button>
     <script>
       var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       var labelIndex = 0;
@@ -57,6 +58,8 @@
       var directionsService;
       var directionsDisplay;
       var markers = [];
+      var redrawButton = document.getElementById('redrawButton');
+      var clearButton = document.getElementById('clearMarkers');
 
 
 
@@ -68,21 +71,23 @@
       // getLocation();
       // HTML5 Location
 
-      function setupDirectionDisplay() {
-        if(directionsDisplay != null) {
-            directionsDisplay.setMap(null);
-            directionsDisplay = null;
-        }
+      // function setupDirectionDisplay() {
+      //   if(directionsDisplay != null) {
+      //       directionsDisplay.setMap(null);
+      //       directionsDisplay = null;
+      //   }
 
-        if (!map) { return; }
-        directionsDisplay = new google.maps.DirectionsRenderer({
-          draggable: true,
-          map: map,
-          panel: document.getElementById('right-panel'),
-          animation: google.maps.Animation.DROP
-        });
-      }
+      //   if (!map) { return; }
+      //   directionsDisplay = new google.maps.DirectionsRenderer({
+      //     suppressMarkers: true,
+      //     draggable: true,
+      //     map: map,
+      //     panel: document.getElementById('right-panel'),
+      //     animation: google.maps.Animation.DROP
+      //   });
+      // }
 
+      // setupDirectionDisplay();
 
       function initMap() {
         var map = new google.maps.Map(document.getElementById('map'), {
@@ -92,9 +97,11 @@
 
         var directionsService = new google.maps.DirectionsService;
         var directionsDisplay = new google.maps.DirectionsRenderer({
+          // suppressMarkers: true,
           draggable: true,
           map: map,
-          panel: document.getElementById('right-panel')
+          panel: document.getElementById('right-panel'),
+          animation: google.maps.Animation.DROP
         });
 
         directionsDisplay.addListener('directions_changed', function() {
@@ -104,13 +111,17 @@
         displayRoute('Stalowa, Wrocław', 'plac Grunwaldzki, Wrocław', directionsService, directionsDisplay);
 
         google.maps.event.addListener(map, 'click', function(event) {
+          console.log('event', event);
           addMarker(event.latLng, map);
         });
 
-        var button = document.getElementById('redrawButton');
-        button.addEventListener('click', function() {
+        redrawButton.addEventListener('click', function() {
           displayRoute('Stalowa, Wrocław', 'plac Grunwaldzki, Wrocław', directionsService, directionsDisplay);
           console.log(markers);
+          clearMarkers();
+        });
+
+        clearButton.addEventListener('click', function() {
           clearMarkers();
         });
       }
