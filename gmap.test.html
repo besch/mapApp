@@ -60,8 +60,17 @@
       var markers = [];
       var redrawButton = document.getElementById('redrawButton');
       var clearButton = document.getElementById('clearMarkers');
+      var bounds = new google.maps.LatLngBounds();
 
+      var points = [
+        { start: { lat: 51.0944782, lng: 17.0153655 }, end: { lat: 51.1199982, lng: 17.0772734 }},
+        { start: { lat: 51.1103805, lng: 17.0264187 }, end: { lat: 51.1058269, lng: 17.0473185 }},
+        { start: { lat: 51.0909071, lng: 17.0176219 }, end: { lat: 51.1158872, lng: 17.060666 }},
+        { start: { lat: 51.111539, lng: 17.0602789 }, end: { lat: 51.1176007, lng: 17.0897618 }},
+        { start: { lat: 51.1171158, lng: 17.0419112 }, end: { lat: 51.1317415, lng: 17.0790758 }}
+      ];
 
+      var colors = ['Maroon', 'Red', 'Orange', 'Yellow', 'Olive', 'Green', 'Purple', 'Teal', 'Navi', 'Lime', 'Aqua'];
 
       // HTML5 Location
       // function getLocation() {
@@ -249,6 +258,166 @@
           'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
               if(sts=='OK')ren.setDirections(res);
           }) 
+      }
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+      var polyline1 = new google.maps.Polyline({
+          path: [],
+          strokeColor: "#DD71D8",
+          strokeWeight: 1
+      });
+      var polyline2 = new google.maps.Polyline({
+          path: [],
+          strokeColor: "#0000ff",
+          strokeWeight: 1
+      });
+      var polyline3 = new google.maps.Polyline({
+          path: [],
+          strokeColor: "#ff0000",
+          strokeWeight: 8
+      });
+
+
+      function loadRoute1() {
+          var request = {
+              origin: new google.maps.LatLng(30.244517, -97.892271),
+              destination: new google.maps.LatLng(30.244517, -97.892271),
+              waypoints: [{
+                  location: new google.maps.LatLng(30.241532, -97.894202)
+              }, {
+                  location: new google.maps.LatLng(30.240374, -97.891633)
+              }, {
+                  location: new google.maps.LatLng(30.244220, -97.890442)
+              }],
+              travelMode: google.maps.TravelMode.DRIVING
+          };
+
+          directionsService.route(request, function (result, status) {
+              if (status == google.maps.DirectionsStatus.OK) {
+                  result.draggable = true;
+                  var renderer = new google.maps.DirectionsRenderer({
+                      draggable: false, // true,
+                      polylineOptions: {
+                          strokeColor: "#DD71D8",
+                          strokeWeight: 1
+                      },
+                      map: map
+                  });
+                  var path = result.routes[0].overview_path;
+                  var legs = result.routes[0].legs;
+                  for (i = 0; i < legs.length; i++) {
+                      var steps = legs[i].steps;
+                      for (j = 0; j < steps.length; j++) {
+                          var nextSegment = steps[j].path;
+                          for (k = 0; k < nextSegment.length; k++) {
+                              polyline1.getPath().push(nextSegment[k]);
+                              bounds.extend(nextSegment[k]);
+                          }
+                      }
+                  }
+                  // polyline1.setMap(map);
+                  if (polyline2.getPath().getLength() > 1) {
+                      getPolylineIntersection();
+                  }
+                  renderer.setDirections(result);
+              }
+          });
+      }
+
+      function loadRoute2() {
+          var request = {
+              origin: new google.maps.LatLng(30.244220, -97.890426),
+              destination: new google.maps.LatLng(30.244220, -97.890426),
+              waypoints: [{
+                  location: new google.maps.LatLng(30.243312, -97.890877)
+              }, {
+                  location: new google.maps.LatLng(30.242431, -97.891601)
+              }, {
+                  location: new google.maps.LatLng(30.243145, -97.893156)
+              }, {
+                  location: new google.maps.LatLng(30.242357, -97.893811)
+              }, {
+                  location: new google.maps.LatLng(30.241671, -97.891783)
+              }],
+              travelMode: google.maps.TravelMode.DRIVING
+          };
+
+
+          directionsService.route(request, function (result, status) {
+              if (status == google.maps.DirectionsStatus.OK) {
+                  result.draggable = true;
+                  var renderer = new google.maps.DirectionsRenderer({
+                      draggable: false, // true,
+                      polylineOptions: {
+                          strokeColor: "#0000ff",
+                          strokeWeight: 1
+                      },
+                      map: map
+                  });
+                  var path = result.routes[0].overview_path;
+                  var legs = result.routes[0].legs;
+                  for (i = 0; i < legs.length; i++) {
+                      var steps = legs[i].steps;
+                      for (j = 0; j < steps.length; j++) {
+                          var nextSegment = steps[j].path;
+                          for (k = 0; k < nextSegment.length; k++) {
+                              polyline2.getPath().push(nextSegment[k]);
+                              bounds.extend(nextSegment[k]);
+                          }
+                      }
+                  }
+                  // polyline2.setMap(map);
+                  if (polyline1.getPath().getLength() > 1) {
+                      getPolylineIntersection();
+                  }
+                  renderer.setDirections(result);
+              }
+          });
+      }
+
+      function getPolylineIntersection() {
+          var commonPts = [];
+          for (var i = 0; i < polyline1.getPath().getLength(); i++) {
+              for (var j = 0; j < polyline2.getPath().getLength(); j++) {
+                  if (polyline1.getPath().getAt(i).equals(polyline2.getPath().getAt(j))) {
+                      commonPts.push({
+                          lat: polyline1.getPath().getAt(i).lat(),
+                          lng: polyline1.getPath().getAt(i).lng(),
+                          route1idx: i
+                      });
+                  }
+              }
+          }
+          var path = [];
+          var prevIdx = commonPts[0].route1idx;
+          for (var i = 0; i < commonPts.length; i++) {
+              if (commonPts[i].route1idx <= prevIdx + 1) {
+                  path.push(commonPts[i]);
+                  prevIdx = commonPts[i].route1idx;
+              } else {
+                  var polyline = new google.maps.Polyline({
+                      map: map,
+                      path: path,
+                      strokeWeight: 8,
+                      strokeColor: "#ff0000"
+                  });
+                  path = [];
+                  prevIdx = commonPts[i].route1idx;
+              }
+          }
+          var polyline = new google.maps.Polyline({
+              map: map,
+              path: path,
+              strokeWeight: 8,
+              strokeColor: "#ff0000"
+          });
       }
 
 
