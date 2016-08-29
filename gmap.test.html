@@ -222,6 +222,35 @@
         markers = [];
       }
 
+      function save_waypoints() {
+          var w=[],wp;
+          var rleg = directionsDisplay.directions.routes[0].legs[0];
+          data.start = {'lat': rleg.start_location.lat(), 'lng':rleg.start_location.lng()}
+          data.end = {'lat': rleg.end_location.lat(), 'lng':rleg.end_location.lng()}
+          var wp = rleg.via_waypoints 
+          for(var i=0;i<wp.length;i++)w[i] = [wp[i].lat(),wp[i].lng()] 
+          data.waypoints = w;
+           
+          var str = JSON.stringify(data)
+       
+          // $http.post('url', {data: str});
+      }
+
+      function set_route_from_waypoints (os) {
+          var os = os || $http.get('url').then(function (data) { return data });
+
+          var wp = [];
+          for(var i=0;i<os.waypoints.length;i++)
+              wp[i] = {'location': new google.maps.LatLng(os.waypoints[i][0], os.waypoints[i][1]),'stopover':false }
+              
+          directionsService.route({'origin':new google.maps.LatLng(os.start.lat,os.start.lng),
+          'destination':new google.maps.LatLng(os.end.lat,os.end.lng),
+          'waypoints': wp,
+          'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
+              if(sts=='OK')ren.setDirections(res);
+          }) 
+      }
+
 
 
 
