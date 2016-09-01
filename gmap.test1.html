@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <title>Draggable directions</title>
+    <style>
+      #right-panel {
+        font-family: 'Roboto','sans-serif';
+        line-height: 30px;
+        padding-left: 10px;
+      }
+
+      #right-panel select, #right-panel input {
+        font-size: 15px;
+      }
+
+      #right-panel select {
+        width: 100%;
+      }
+
+      #right-panel i {
+        font-size: 12px;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+      #map {
+        height: 100%;
+        float: left;
+        width: 63%;
+        height: 500px;
+      }
+      #right-panel {
+        float: right;
+        width: 34%;
+        height: 100%;
+      }
+      .panel {
+        height: 100%;
+        overflow: auto;
+      }
+      .button-container {
+          float: left;
+          clear: both;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+
+    <div class="button-container">
+        <button id="redrawButton">Redraw</button>
+        <button id="clearMarkers">Clear markers</button>
+    </div>
+
+    <!--<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8&callback=initMap"></script>-->
+    <!--<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8"></script>-->
+    <script>
+      var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      var labelIndex = 0;
+      var waypoints = [];
+      var directionsService;
+      var directionsDisplay;
+      var markers = [];
+      var map;
+      var redrawButton = document.getElementById('redrawButton');
+      var clearButton = document.getElementById('clearMarkers');
+      var bounds;
+
+      var colors = ['Maroon', 'Red', 'Orange', 'Yellow', 'Olive', 'Green', 'Purple', 'Teal', 'Navi', 'Lime', 'Aqua'];
+
+      var sampleRoutes = [
+        { start: { lat: 51.0944782, lng: 17.0153655 }, end: { lat: 51.1199982, lng: 17.0772734 }},
+        { start: { lat: 51.1103805, lng: 17.0264187 }, end: { lat: 51.1058269, lng: 17.0473185 }},
+        { start: { lat: 51.0909071, lng: 17.0176219 }, end: { lat: 51.1158872, lng: 17.060666 }},
+        { start: { lat: 51.111539, lng: 17.0602789 }, end: { lat: 51.1176007, lng: 17.0897618 }},
+        { start: { lat: 51.1171158, lng: 17.0419112 }, end: { lat: 51.1317415, lng: 17.0790758 }}
+      ];
+
+      function initMap() {
+        map = new google.maps.Map(document.getElementById('map'), {
+          zoom: 6,
+          center: {lat: 51.1092517, lng: 17.0391974}
+        });
+
+        directionsService = new google.maps.DirectionsService;
+
+        sampleRoutes.forEach(function (route, i) {
+            displayRoute(route.start, route.end, colors[i]);
+        });
+
+    //     displayRoute('Stalowa, Wrocław', 'plac Grunwaldzki, Wrocław', directionsService, directionsDisplay);
+
+    //     google.maps.event.addListener(map, 'click', function(event) {
+    //       console.log('event', event);
+    //       addMarker(event.latLng, map);
+    //     });
+
+    //     redrawButton.addEventListener('click', function() {
+    //       displayRoute('Stalowa, Wrocław', 'plac Grunwaldzki, Wrocław', directionsService, directionsDisplay);
+    //       console.log(markers);
+    //       clearMarkers();
+    //     });
+
+    //     clearButton.addEventListener('click', function() {
+    //       clearMarkers();
+    //     });
+      }
+
+      function displayRoute(origin, destination, strokeColor) {
+        
+        var renderer = new google.maps.DirectionsRenderer({
+            draggable: true,
+            polylineOptions: {
+                strokeColor: strokeColor,
+                strokeWeight: 3
+            },
+            map: map
+        });
+
+        directionsService.route({
+          origin: new google.maps.LatLng(origin),
+          destination: new google.maps.LatLng(destination),
+          // waypoints: [{location: 'plac Orląt Lwowskich, Wrocław'}, {location: 'Kazimierza Wielkiego, Wrocław'}],
+          waypoints: waypoints,
+          travelMode: 'DRIVING',
+          avoidTolls: true
+        }, function(response, status) {
+          if (status === 'OK') {
+            renderer.setDirections(response);
+          } else {
+            alert('Could not display directions due to: ' + status);
+          }
+        });
+      }
+
+      function addMarker(location, map) {
+        // Add the marker at the clicked location, and add the next-available label
+        // from the array of alphabetical characters.
+        var marker = new google.maps.Marker({
+          position: location,
+          label: labels[labelIndex++ % labels.length],
+          map: map
+        });
+
+        // marker.addListener("dblclick", function(e) {
+        //     console.log('event', e);
+        //     marker.setMap(null);
+        // });
+
+        var id = marker.__gm_id
+        markers[id] = marker; 
+
+        google.maps.event.addListener(marker, "rightclick", function (point) { id = this.__gm_id; delMarker(id) });
+
+        markers.push(marker);
+
+        waypoints.push({location: location });
+      }
+
+      function delMarker (id) {
+          marker = markers[id]; 
+          marker.setMap(null);
+      }
+
+      // Sets the map on all markers in the array.
+      function setMapOnAll(map) {
+        for (var i = 0; i < markers.length; i++) {
+          markers[i].setMap(map);
+        }
+      }
+
+      // Removes the markers from the map, but keeps them in the array.
+      function clearMarkers() {
+        setMapOnAll(null);
+      }
+
+      // Shows any markers currently in the array.
+      function showMarkers() {
+        setMapOnAll(map);
+      }
+
+      // Deletes all markers in the array by removing references to them.
+      function deleteMarkers() {
+        clearMarkers();
+        markers = [];
+      }
+
+      function save_waypoints() {
+          var w=[],wp;
+          var rleg = directionsDisplay.directions.routes[0].legs[0];
+          data.start = {'lat': rleg.start_location.lat(), 'lng':rleg.start_location.lng()}
+          data.end = {'lat': rleg.end_location.lat(), 'lng':rleg.end_location.lng()}
+          var wp = rleg.via_waypoints 
+          for(var i=0;i<wp.length;i++)w[i] = [wp[i].lat(),wp[i].lng()] 
+          data.waypoints = w;
+           
+          var str = JSON.stringify(data)
+       
+          // $http.post('url', {data: str});
+      }
+
+      function set_route_from_waypoints (os) {
+          var os = os || $http.get('url').then(function (data) { return data });
+
+          var wp = [];
+          for(var i=0;i<os.waypoints.length;i++)
+              wp[i] = {'location': new google.maps.LatLng(os.waypoints[i][0], os.waypoints[i][1]),'stopover':false }
+              
+          directionsService.route({'origin':new google.maps.LatLng(os.start.lat,os.start.lng),
+          'destination':new google.maps.LatLng(os.end.lat,os.end.lng),
+          'waypoints': wp,
+          'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
+              if(sts=='OK')ren.setDirections(res);
+          }) 
+      }
+
+
+
+
+
+
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+    //   var polyline1 = new google.maps.Polyline({
+    //       path: [],
+    //       strokeColor: "#DD71D8",
+    //       strokeWeight: 1
+    //   });
+    //   var polyline2 = new google.maps.Polyline({
+    //       path: [],
+    //       strokeColor: "#0000ff",
+    //       strokeWeight: 1
+    //   });
+    //   var polyline3 = new google.maps.Polyline({
+    //       path: [],
+    //       strokeColor: "#ff0000",
+    //       strokeWeight: 8
+    //   });
+
+    //   sampleRoutes.forEach(function (route, i) {
+    //     loadRoute(route.start, route.end);
+    //   });
+
+      function loadRoute(origin, destination, waypoints) {
+        bounds = new google.maps.LatLngBounds();
+        directionsService.route({
+          origin: new google.maps.LatLng(origin),
+          destination: new google.maps.LatLng(destination),
+          waypoints: waypoints || [],
+          travelMode: google.maps.TravelMode.DRIVING
+        }, function (result, status) {
+              if (status == google.maps.DirectionsStatus.OK) {
+                  result.draggable = true;
+                  var renderer = new google.maps.DirectionsRenderer({
+                      draggable: false, // true,
+                      polylineOptions: {
+                          strokeColor: "#DD71D8",
+                          strokeWeight: 1
+                      },
+                      map: map
+                  });
+                  var path = result.routes[0].overview_path;
+                  var legs = result.routes[0].legs;
+                  for (i = 0; i < legs.length; i++) {
+                      var steps = legs[i].steps;
+                      for (j = 0; j < steps.length; j++) {
+                          var nextSegment = steps[j].path;
+                          for (k = 0; k < nextSegment.length; k++) {
+                              polyline1.getPath().push(nextSegment[k]);
+                              bounds.extend(nextSegment[k]);
+                          }
+                      }
+                  }
+                  // polyline1.setMap(map);
+                  if (polyline2.getPath().getLength() > 1) {
+                      getPolylineIntersection();
+                  }
+                  renderer.setDirections(result);
+              }
+          });
+      }
+
+      function getPolylineIntersection() {
+          var commonPts = [];
+          for (var i = 0; i < polylineDriver.getPath().getLength(); i++) {
+              for (var j = 0; j < polylineDroven.getPath().getLength(); j++) {
+                  if (polyline1.getPath().getAt(i).equals(polylineDroven.getPath().getAt(j))) {
+                      commonPts.push({
+                          lat: polyline1.getPath().getAt(i).lat(),
+                          lng: polyline1.getPath().getAt(i).lng(),
+                          route1idx: i
+                      });
+                  }
+              }
+          }
+          var path = [];
+          var prevIdx = commonPts[0].route1idx;
+          for (var i = 0; i < commonPts.length; i++) {
+              if (commonPts[i].route1idx <= prevIdx + 1) {
+                  path.push(commonPts[i]);
+                  prevIdx = commonPts[i].route1idx;
+              } else {
+                  var polyline = new google.maps.Polyline({
+                      map: map,
+                      path: path,
+                      strokeWeight: 8,
+                      strokeColor: "#ff0000"
+                  });
+                  path = [];
+                  prevIdx = commonPts[i].route1idx;
+              }
+          }
+          var polyline = new google.maps.Polyline({
+              map: map,
+              path: path,
+              strokeWeight: 8,
+              strokeColor: "#ff0000"
+          });
+      }
+
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8&callback=initMap"></script>
+  </body>
+</html>
