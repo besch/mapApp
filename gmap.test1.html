@@ -56,8 +56,6 @@
         <button id="clearMarkers">Clear markers</button>
     </div>
 
-    <!--<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8&callback=initMap"></script>-->
-    <!--<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8"></script>-->
     <script>
       var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
       var labelIndex = 0;
@@ -91,23 +89,6 @@
         sampleRoutes.forEach(function (route, i) {
             displayRoute(route.start, route.end, colors[i]);
         });
-
-    //     displayRoute('Stalowa, Wrocław', 'plac Grunwaldzki, Wrocław', directionsService, directionsDisplay);
-
-    //     google.maps.event.addListener(map, 'click', function(event) {
-    //       console.log('event', event);
-    //       addMarker(event.latLng, map);
-    //     });
-
-    //     redrawButton.addEventListener('click', function() {
-    //       displayRoute('Stalowa, Wrocław', 'plac Grunwaldzki, Wrocław', directionsService, directionsDisplay);
-    //       console.log(markers);
-    //       clearMarkers();
-    //     });
-
-    //     clearButton.addEventListener('click', function() {
-    //       clearMarkers();
-    //     });
       }
 
       function displayRoute(origin, destination, strokeColor) {
@@ -125,7 +106,6 @@
           origin: new google.maps.LatLng(origin),
           destination: new google.maps.LatLng(destination),
           // waypoints: [{location: 'plac Orląt Lwowskich, Wrocław'}, {location: 'Kazimierza Wielkiego, Wrocław'}],
-          waypoints: waypoints,
           travelMode: 'DRIVING',
           avoidTolls: true
         }, function(response, status) {
@@ -137,86 +117,103 @@
         });
       }
 
-      function addMarker(location, map) {
-        // Add the marker at the clicked location, and add the next-available label
-        // from the array of alphabetical characters.
-        var marker = new google.maps.Marker({
-          position: location,
-          label: labels[labelIndex++ % labels.length],
-          map: map
+      function createPolyline (result) {
+        var bounds = new google.maps.LatLngBounds();
+        var polyline = new google.maps.Polyline({
+            path: [],
+            strokeColor: "#DD71D8",
+            strokeWeight: 8
         });
+        var path = result.routes[0].overview_path;
+        var legs = result.routes[0].legs;
 
-        // marker.addListener("dblclick", function(e) {
-        //     console.log('event', e);
-        //     marker.setMap(null);
-        // });
-
-        var id = marker.__gm_id
-        markers[id] = marker; 
-
-        google.maps.event.addListener(marker, "rightclick", function (point) { id = this.__gm_id; delMarker(id) });
-
-        markers.push(marker);
-
-        waypoints.push({location: location });
-      }
-
-      function delMarker (id) {
-          marker = markers[id]; 
-          marker.setMap(null);
-      }
-
-      // Sets the map on all markers in the array.
-      function setMapOnAll(map) {
-        for (var i = 0; i < markers.length; i++) {
-          markers[i].setMap(map);
+        for (i = 0; i < legs.length; i++) {
+            var steps = legs[i].steps;
+            for (j = 0; j < steps.length; j++) {
+                var nextSegment = steps[j].path;
+                for (k = 0; k < nextSegment.length; k++) {
+                    polyline.getPath().push(nextSegment[k]);
+                    bounds.extend(nextSegment[k]);
+                }
+            }
         }
       }
 
-      // Removes the markers from the map, but keeps them in the array.
-      function clearMarkers() {
-        setMapOnAll(null);
-      }
+      function getPolylineIntersection() {
+        var commonPts = [];
+        for (var i = 0; i < polyline1.getPath().getLength(); i++) {
+            for (var j = 0; j < polyline2.getPath().getLength(); j++) {
+                if (polyline1.getPath().getAt(i).equals(polyline2.getPath().getAt(j))) {
+                    commonPts.push({
+                        lat: polyline1.getPath().getAt(i).lat(),
+                        lng: polyline1.getPath().getAt(i).lng(),
+                        route1idx: i
+                    });
+                }
+            }
+        }
+        var path = [];
+        var prevIdx = commonPts[0].route1idx;
+        for (var i = 0; i < commonPts.length; i++) {
+            if (commonPts[i].route1idx <= prevIdx + 1) {
+                path.push(commonPts[i]);
+                prevIdx = commonPts[i].route1idx;
+            } else {
+                var polyline = new google.maps.Polyline({
+                    map: map,
+                    path: path,
+                    strokeWeight: 8,
+                    strokeColor: "#ff0000"
+                });
+                path = [];
+                prevIdx = commonPts[i].route1idx;
+            }
+        }
+        var polyline = new google.maps.Polyline({
+            map: map,
+            path: path,
+            strokeWeight: 8,
+            strokeColor: "#ff0000"
+        });
 
-      // Shows any markers currently in the array.
-      function showMarkers() {
-        setMapOnAll(map);
-      }
+    }
 
-      // Deletes all markers in the array by removing references to them.
-      function deleteMarkers() {
-        clearMarkers();
-        markers = [];
-      }
 
-      function save_waypoints() {
-          var w=[],wp;
-          var rleg = directionsDisplay.directions.routes[0].legs[0];
-          data.start = {'lat': rleg.start_location.lat(), 'lng':rleg.start_location.lng()}
-          data.end = {'lat': rleg.end_location.lat(), 'lng':rleg.end_location.lng()}
-          var wp = rleg.via_waypoints 
-          for(var i=0;i<wp.length;i++)w[i] = [wp[i].lat(),wp[i].lng()] 
-          data.waypoints = w;
-           
-          var str = JSON.stringify(data)
-       
-          // $http.post('url', {data: str});
-      }
 
-      function set_route_from_waypoints (os) {
-          var os = os || $http.get('url').then(function (data) { return data });
 
-          var wp = [];
-          for(var i=0;i<os.waypoints.length;i++)
-              wp[i] = {'location': new google.maps.LatLng(os.waypoints[i][0], os.waypoints[i][1]),'stopover':false }
+
+
+
+      
+
+    //   function save_waypoints() {
+    //       var w=[],wp;
+    //       var rleg = directionsDisplay.directions.routes[0].legs[0];
+    //       data.start = {'lat': rleg.start_location.lat(), 'lng':rleg.start_location.lng()}
+    //       data.end = {'lat': rleg.end_location.lat(), 'lng':rleg.end_location.lng()}
+    //       var wp = rleg.via_waypoints 
+    //       for(var i=0;i<wp.length;i++)w[i] = [wp[i].lat(),wp[i].lng()] 
+    //       data.waypoints = w;
+    //        
+    //       var str = JSON.stringify(data)
+    //    
+    //       // $http.post('url', {data: str});
+    //   }
+
+    //   function set_route_from_waypoints (os) {
+    //       var os = os || $http.get('url').then(function (data) { return data });
+
+    //       var wp = [];
+    //       for(var i=0;i<os.waypoints.length;i++)
+    //           wp[i] = {'location': new google.maps.LatLng(os.waypoints[i][0], os.waypoints[i][1]),'stopover':false }
               
-          directionsService.route({'origin':new google.maps.LatLng(os.start.lat,os.start.lng),
-          'destination':new google.maps.LatLng(os.end.lat,os.end.lng),
-          'waypoints': wp,
-          'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
-              if(sts=='OK')ren.setDirections(res);
-          }) 
-      }
+    //       directionsService.route({'origin':new google.maps.LatLng(os.start.lat,os.start.lng),
+    //       'destination':new google.maps.LatLng(os.end.lat,os.end.lng),
+    //       'waypoints': wp,
+    //       'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
+    //           if(sts=='OK')ren.setDirections(res);
+    //       }) 
+    //   }
 
 
 
