@@ -30,7 +30,7 @@
       #map {
         height: 100%;
         float: left;
-        width: 63%;
+        width: 100%;
         height: 500px;
       }
       #right-panel {
@@ -63,6 +63,7 @@
       var directionsService;
       var directionsDisplay;
       var markers = [];
+      var polylines = [];
       var map;
       var redrawButton = document.getElementById('redrawButton');
       var clearButton = document.getElementById('clearMarkers');
@@ -89,6 +90,10 @@
         sampleRoutes.forEach(function (route, i) {
             displayRoute(route.start, route.end, colors[i]);
         });
+
+        setTimeout(function () {
+            getPolylineIntersection();
+        }, 1000);
       }
 
       function displayRoute(origin, destination, strokeColor) {
@@ -111,6 +116,7 @@
         }, function(response, status) {
           if (status === 'OK') {
             renderer.setDirections(response);
+            createPolyline(response);
           } else {
             alert('Could not display directions due to: ' + status);
           }
@@ -134,48 +140,62 @@
                 for (k = 0; k < nextSegment.length; k++) {
                     polyline.getPath().push(nextSegment[k]);
                     bounds.extend(nextSegment[k]);
+
+                    polylines.push(polyline);
+                    // console.log(polylines);
                 }
             }
         }
       }
 
       function getPolylineIntersection() {
-        var commonPts = [];
-        for (var i = 0; i < polyline1.getPath().getLength(); i++) {
-            for (var j = 0; j < polyline2.getPath().getLength(); j++) {
-                if (polyline1.getPath().getAt(i).equals(polyline2.getPath().getAt(j))) {
-                    commonPts.push({
-                        lat: polyline1.getPath().getAt(i).lat(),
-                        lng: polyline1.getPath().getAt(i).lng(),
-                        route1idx: i
-                    });
+        //   console.log(polylines);
+          // polyline[1] - driver, rest of polylines are ride sharers
+          var driver = polylines[0]; // shift method affects polylines array and removes 1 element
+          var rest = polylines.slice(1,3);
+        //   console.log('driver', driver);
+        //   console.log('polylines', polylines);
+        //   return;
+        //   console.log(driver, rest);
+
+          rest.forEach(function (pl) {
+            var commonPts = [];
+            for (var i = 0; i < driver.getPath().getLength(); i++) {
+                for (var j = 0; j < pl.getPath().getLength(); j++) {
+                    if (driver.getPath().getAt(i).equals(pl.getPath().getAt(j))) {
+                        commonPts.push({
+                            lat: driver.getPath().getAt(i).lat(),
+                            lng: driver.getPath().getAt(i).lng(),
+                            route1idx: i
+                        });
+                        console.log(commonPts);
+                    }
                 }
             }
-        }
-        var path = [];
-        var prevIdx = commonPts[0].route1idx;
-        for (var i = 0; i < commonPts.length; i++) {
-            if (commonPts[i].route1idx <= prevIdx + 1) {
-                path.push(commonPts[i]);
-                prevIdx = commonPts[i].route1idx;
-            } else {
-                var polyline = new google.maps.Polyline({
-                    map: map,
-                    path: path,
-                    strokeWeight: 8,
-                    strokeColor: "#ff0000"
-                });
-                path = [];
-                prevIdx = commonPts[i].route1idx;
+            var path = [];
+            var prevIdx = commonPts[0].route1idx;
+            for (var i = 0; i < commonPts.length; i++) {
+                if (commonPts[i].route1idx <= prevIdx + 1) {
+                    path.push(commonPts[i]);
+                    prevIdx = commonPts[i].route1idx;
+                } else {
+                    var polyline = new google.maps.Polyline({
+                        map: map,
+                        path: path,
+                        strokeWeight: 8,
+                        strokeColor: "#ff0000"
+                    });
+                    path = [];
+                    prevIdx = commonPts[i].route1idx;
+                }
             }
-        }
-        var polyline = new google.maps.Polyline({
-            map: map,
-            path: path,
-            strokeWeight: 8,
-            strokeColor: "#ff0000"
-        });
-
+            var polyline = new google.maps.Polyline({
+                map: map,
+                path: path,
+                strokeWeight: 8,
+                strokeColor: "#ff0000"
+            });
+          });
     }
 
 
@@ -215,110 +235,6 @@
     //       }) 
     //   }
 
-
-
-
-
-
-
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
-    //   var polyline1 = new google.maps.Polyline({
-    //       path: [],
-    //       strokeColor: "#DD71D8",
-    //       strokeWeight: 1
-    //   });
-    //   var polyline2 = new google.maps.Polyline({
-    //       path: [],
-    //       strokeColor: "#0000ff",
-    //       strokeWeight: 1
-    //   });
-    //   var polyline3 = new google.maps.Polyline({
-    //       path: [],
-    //       strokeColor: "#ff0000",
-    //       strokeWeight: 8
-    //   });
-
-    //   sampleRoutes.forEach(function (route, i) {
-    //     loadRoute(route.start, route.end);
-    //   });
-
-      function loadRoute(origin, destination, waypoints) {
-        bounds = new google.maps.LatLngBounds();
-        directionsService.route({
-          origin: new google.maps.LatLng(origin),
-          destination: new google.maps.LatLng(destination),
-          waypoints: waypoints || [],
-          travelMode: google.maps.TravelMode.DRIVING
-        }, function (result, status) {
-              if (status == google.maps.DirectionsStatus.OK) {
-                  result.draggable = true;
-                  var renderer = new google.maps.DirectionsRenderer({
-                      draggable: false, // true,
-                      polylineOptions: {
-                          strokeColor: "#DD71D8",
-                          strokeWeight: 1
-                      },
-                      map: map
-                  });
-                  var path = result.routes[0].overview_path;
-                  var legs = result.routes[0].legs;
-                  for (i = 0; i < legs.length; i++) {
-                      var steps = legs[i].steps;
-                      for (j = 0; j < steps.length; j++) {
-                          var nextSegment = steps[j].path;
-                          for (k = 0; k < nextSegment.length; k++) {
-                              polyline1.getPath().push(nextSegment[k]);
-                              bounds.extend(nextSegment[k]);
-                          }
-                      }
-                  }
-                  // polyline1.setMap(map);
-                  if (polyline2.getPath().getLength() > 1) {
-                      getPolylineIntersection();
-                  }
-                  renderer.setDirections(result);
-              }
-          });
-      }
-
-      function getPolylineIntersection() {
-          var commonPts = [];
-          for (var i = 0; i < polylineDriver.getPath().getLength(); i++) {
-              for (var j = 0; j < polylineDroven.getPath().getLength(); j++) {
-                  if (polyline1.getPath().getAt(i).equals(polylineDroven.getPath().getAt(j))) {
-                      commonPts.push({
-                          lat: polyline1.getPath().getAt(i).lat(),
-                          lng: polyline1.getPath().getAt(i).lng(),
-                          route1idx: i
-                      });
-                  }
-              }
-          }
-          var path = [];
-          var prevIdx = commonPts[0].route1idx;
-          for (var i = 0; i < commonPts.length; i++) {
-              if (commonPts[i].route1idx <= prevIdx + 1) {
-                  path.push(commonPts[i]);
-                  prevIdx = commonPts[i].route1idx;
-              } else {
-                  var polyline = new google.maps.Polyline({
-                      map: map,
-                      path: path,
-                      strokeWeight: 8,
-                      strokeColor: "#ff0000"
-                  });
-                  path = [];
-                  prevIdx = commonPts[i].route1idx;
-              }
-          }
-          var polyline = new google.maps.Polyline({
-              map: map,
-              path: path,
-              strokeWeight: 8,
-              strokeColor: "#ff0000"
-          });
-      }
 
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8&callback=initMap"></script>
