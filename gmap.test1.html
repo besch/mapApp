@@ -32,23 +32,34 @@
       var directionsService;
       var directionsDisplay;
       var markers = [];
+      var circlePointsIntersection = [];
       var polylines = [];
       var map;
       var redrawButton = document.getElementById('redrawButton');
       var clearButton = document.getElementById('clearMarkers');
       var bounds;
+      var circles = [];
 
       var colors = ['Maroon', 'Red', 'Orange', 'Yellow', 'Olive', 'Green', 'Purple', 'Teal', 'Navi', 'Lime', 'Aqua'];
 
-      var sampleRoutes = [
-        { start: { lat: 51.0944782, lng: 17.0153655 }, end: { lat: 51.1199982, lng: 17.0772734 }},
-        { start: { lat: 51.1103805, lng: 17.0264187 }, end: { lat: 51.1058269, lng: 17.0473185 }},
-        { start: { lat: 51.0909071, lng: 17.0176219 }, end: { lat: 51.1158872, lng: 17.060666 }},
-        { start: { lat: 51.111539, lng: 17.0602789 }, end: { lat: 51.1176007, lng: 17.0897618 }},
-        { start: { lat: 51.1171158, lng: 17.0419112 }, end: { lat: 51.1317415, lng: 17.0790758 }}
-      ];
+    //   var sampleRoutes = [
+    //     { start: { lat: 51.0944782, lng: 17.0153655 }, end: { lat: 51.1199982, lng: 17.0772734 }},
+    //     { start: { lat: 51.1103805, lng: 17.0264187 }, end: { lat: 51.1058269, lng: 17.0473185 }},
+    //     { start: { lat: 51.0909071, lng: 17.0176219 }, end: { lat: 51.1158872, lng: 17.060666 }},
+    //     { start: { lat: 51.111539, lng: 17.0602789 }, end: { lat: 51.1176007, lng: 17.0897618 }},
+    //     { start: { lat: 51.1171158, lng: 17.0419112 }, end: { lat: 51.1317415, lng: 17.0790758 }}
+    //   ];
+
+    var sampleRoutes = [
+        { start: { lat: 51.0945354, lng: 16.9798706 }, end: { lat: 51.109828, lng: 17.0627203 }},
+        { start: { lat: 51.098363, lng: 16.9994663 }, end: { lat: 51.1082687, lng:17.0376636 }}
+    ];
 
       function initMap() {
+        google.maps.Circle.prototype.contains = function(latLng) {
+            return this.getBounds().contains(latLng) && google.maps.geometry.spherical.computeDistanceBetween(this.getCenter(), latLng) <= this.getRadius();
+        }
+
         map = new google.maps.Map(document.getElementById('map'), {
           zoom: 6,
           center: {lat: 51.1092517, lng: 17.0391974}
@@ -56,52 +67,82 @@
 
         directionsService = new google.maps.DirectionsService;
 
-        sampleRoutes.forEach(function (route, i) {
+        // sampleRoutes.forEach(function (route, i) {
+        //     displayRoute(route.start, route.end, colors[i]);
+        // });
+        var promises = sampleRoutes.map(function (route, i) {
             displayRoute(route.start, route.end, colors[i]);
         });
 
-        setTimeout(function () {
-            getPolylineIntersection();
-        }, 1000);
+        Promise.all(promises)
+        .then(function () {
+            getDriverRouteWaypoints();
+            getIntersectionOfDriverCirclesWithCarpoolerPoints();
+        });
+
+        // setTimeout(function () {
+        //     getDriverRouteWaypoints();
+        //     getIntersectionOfDriverCirclesWithCarpoolerPoints();
+        // }, 1000);
       }
 
       function displayRoute(origin, destination, strokeColor) {
-        
-        var renderer = new google.maps.DirectionsRenderer({
-            draggable: true,
-            polylineOptions: {
-                strokeColor: strokeColor,
-                strokeWeight: 3
-            },
-            map: map
-        });
+        return new Promise((resolve, reject) => {
+            var renderer = new google.maps.DirectionsRenderer({
+                draggable: true,
+                polylineOptions: {
+                    strokeColor: strokeColor,
+                    strokeWeight: 3
+                },
+                map: map
+            });
 
-        directionsService.route({
-          origin: new google.maps.LatLng(origin),
-          destination: new google.maps.LatLng(destination),
-          // waypoints: [{location: 'plac Orląt Lwowskich, Wrocław'}, {location: 'Kazimierza Wielkiego, Wrocław'}],
-          travelMode: 'DRIVING',
-          avoidTolls: true
-        }, function(response, status) {
-          if (status === 'OK') {
-            renderer.setDirections(response);
-            createPolyline(response);
-          } else {
-            alert('Could not display directions due to: ' + status);
-          }
+            directionsService.route({
+            origin: new google.maps.LatLng(origin),
+            destination: new google.maps.LatLng(destination),
+            // waypoints: [{location: 'plac Orląt Lwowskich, Wrocław'}, {location: 'Kazimierza Wielkiego, Wrocław'}],
+            travelMode: 'DRIVING',
+            avoidTolls: true
+            }, function(response, status) {
+            if (status === 'OK') {
+                renderer.setDirections(response);
+                createPolyline(response);
+                resolve(true);
+            } else {
+                alert('Could not display directions due to: ' + status);
+                reject(false);
+            }
+            });
         });
       }
 
-      function createPolyline (result) {
+      function drawCircle (lat, lng) {
+          var circle = new google.maps.Circle({
+                strokeColor: '#FF0000',
+                strokeOpacity: 0.3,
+                strokeWeight: 2,
+                fillColor: '#FF0000',
+                fillOpacity: 0.05,
+                map: map,
+                center: {
+                    lat: lat,
+                    lng: lng
+                },
+                radius: 300
+            });
+
+            circles.push(circle);
+      }
+
+      function createPolyline (request) {
         var bounds = new google.maps.LatLngBounds();
         var polyline = new google.maps.Polyline({
             path: [],
             strokeColor: "#DD71D8",
             strokeWeight: 8
         });
-        var path = result.routes[0].overview_path;
-        var legs = result.routes[0].legs;
-        console.log('legs', legs)
+        var path = request.routes[0].overview_path;
+        var legs = request.routes[0].legs;
 
         for (i = 0; i < legs.length; i++) {
             var steps = legs[i].steps;
@@ -112,65 +153,62 @@
                     bounds.extend(nextSegment[k]);
 
                     polylines.push(polyline);
-                    // console.log(polylines);
                 }
             }
         }
       }
 
-      function getPolylineIntersection() {
-        //   console.log(polylines);
-          // polyline[1] - driver, rest of polylines are ride sharers
-          var driver = polylines[0]; // shift method affects polylines array and removes 1 element
-          var rest = polylines.slice(1,3);
-        //   console.log('driver', driver);
-        //   console.log('polylines', polylines);
-        //   return;
-        //   console.log(driver, rest);
+      function getDriverRouteWaypoints() {
+          var driverRoute = polylines[0];
+          var coords = [];
+          
+           for (var i = 0; i < driverRoute.getPath().getLength(); i++) {
+               var lat = driverRoute.getPath().getAt(i).lat();
+               var lng = driverRoute.getPath().getAt(i).lng();
+               
+               if( i % 25 == 0) { // using only 1/25 of all waypoints in the route
+                    drawCircle(lat, lng);
+               }
+           }
+      }
 
-          rest.forEach(function (pl) {
-            var commonPts = [];
-            for (var i = 0; i < driver.getPath().getLength(); i++) {
-                for (var j = 0; j < pl.getPath().getLength(); j++) {
-                    if (driver.getPath().getAt(i).equals(pl.getPath().getAt(j))) {
-                        commonPts.push({
-                            lat: driver.getPath().getAt(i).lat(),
-                            lng: driver.getPath().getAt(i).lng(),
-                            route1idx: i
-                        });
-                        console.log(commonPts);
-                    }
+      function drawMarker(lat, lng) {
+        var image = 'https://developers.google.com/maps/documentation/javascript/examples/full/images/beachflag.png';
+        var marker = new google.maps.Marker({
+            position: { lat: lat, lng: lng },
+            map: map,
+            animation: google.maps.Animation.DROP,
+            draggable: true,
+            color: image
+        });
+
+        markers.push(marker);
+      }
+
+      function getIntersectionOfDriverCirclesWithCarpoolerPoints() {
+        var carPoolerRoutes = sampleRoutes.slice(1);
+
+        carPoolerRoutes.forEach(function (cpr) {
+            var start = new google.maps.LatLng(cpr.start);
+            var end = new google.maps.LatLng(cpr.end);
+            var arr = [];
+
+            circles.forEach(function (circle) {
+                if (circle.contains(start)) {
+                    drawMarker(cpr.start.lat, cpr.start.lng);
+                    arr.push('start');
                 }
-            }
-            var path = [];
-            var prevIdx = commonPts[0].route1idx;
-            for (var i = 0; i < commonPts.length; i++) {
-                if (commonPts[i].route1idx <= prevIdx + 1) {
-                    path.push(commonPts[i]);
-                    prevIdx = commonPts[i].route1idx;
-                } else {
-                    var polyline = new google.maps.Polyline({
-                        map: map,
-                        path: path,
-                        strokeWeight: 8,
-                        strokeColor: "#ff0000"
-                    });
-                    path = [];
-                    prevIdx = commonPts[i].route1idx;
+                if (circle.contains(end)) {
+                    drawMarker(cpr.end.lat, cpr.end.lng);
+                    arr.push('end');
                 }
-            }
-            var polyline = new google.maps.Polyline({
-                map: map,
-                path: path,
-                strokeWeight: 8,
-                strokeColor: "#ff0000"
             });
-          });
-    }
 
+            if (arr.length == 2) { circlePointsIntersection.push(cpr) };
+            console.log('circlePointsIntersection', circlePointsIntersection);
+        });
 
-
-
+      }
 
 
 
@@ -207,6 +245,6 @@
 
 
     </script>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8&callback=initMap"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBzjPLOcesc9ZWyxrj7ye0Fhp-HW0FEGN8&libraries=geometry&callback=initMap"></script>
   </body>
 </html>
