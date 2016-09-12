@@ -1,0 +1,30 @@
+{
+    "rules": {
+        "twitterClone": {
+            ".read": true,
+            "settings": {
+                ".write": "!data.child('readOnly').exists() && auth != null",
+                ".write": "root.child('twitterClone').child('users').child(auth.uid).child('isAdmin').va() === true",
+                "messageLength": {
+                    ".validate": "newData.isNumber()"
+                }
+            },
+            "userObjects": {
+                "tweet": {
+                    "$userKey": {
+                        "$tweetKey": {
+                            "text": {
+                                ".validate": "newData.isString() && newData.val().length <= root.child('twitterClone').child('settings').child('messageLength').val()"
+                            }
+                        }
+                    }
+                }
+            },
+            "users": {
+                "$userKey": {
+                    ".write": "auth.uid === $userKey"
+                }
+            }
+        }
+    }
+} 

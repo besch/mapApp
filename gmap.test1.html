@@ -25,22 +25,28 @@
         <button id="clearMarkers">Clear markers</button>
     </div>
 
-    <script>
-      var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      var labelIndex = 0;
-      var waypoints = [];
-      var directionsService;
-      var directionsDisplay;
-      var markers = [];
-      var circlePointsIntersection = [];
-      var polylines = [];
-      var map;
-      var redrawButton = document.getElementById('redrawButton');
-      var clearButton = document.getElementById('clearMarkers');
-      var bounds;
-      var circles = [];
 
-      var colors = ['Maroon', 'Red', 'Orange', 'Yellow', 'Olive', 'Green', 'Purple', 'Teal', 'Navi', 'Lime', 'Aqua'];
+    <script src="https://www.gstatic.com/firebasejs/3.3.0/firebase.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.14.1/moment.js"></script>
+    <script src="gmap.test1.firebase.js"></script>
+    <script src="gmap.test1.driverOptions.js"></script>
+
+    <script>
+			var labels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+			var labelIndex = 0;
+			var waypoints = [];
+			var directionsService;
+			var directionsDisplay;
+			var markers = [];
+			var circlePointsIntersection = [];
+			var polylines = [];
+			var map;
+			var redrawButton = document.getElementById('redrawButton');
+			var clearButton = document.getElementById('clearMarkers');
+			var bounds;
+			var circles = [];
+
+    	var colors = ['Maroon', 'Red', 'Orange', 'Yellow', 'Olive', 'Green', 'Purple', 'Teal', 'Navi', 'Lime', 'Aqua'];
 
     //   var sampleRoutes = [
     //     { start: { lat: 51.0944782, lng: 17.0153655 }, end: { lat: 51.1199982, lng: 17.0772734 }},
@@ -50,10 +56,12 @@
     //     { start: { lat: 51.1171158, lng: 17.0419112 }, end: { lat: 51.1317415, lng: 17.0790758 }}
     //   ];
 
-    var sampleRoutes = [
-        { start: { lat: 51.0945354, lng: 16.9798706 }, end: { lat: 51.109828, lng: 17.0627203 }},
-        { start: { lat: 51.098363, lng: 16.9994663 }, end: { lat: 51.1082687, lng:17.0376636 }}
-    ];
+			var sampleRoutes = [
+					{ start: { lat: 51.0945354, lng: 16.9798706 }, end: { lat: 51.109828, lng: 17.0627203 }},
+					{ start: { lat: 51.098363, lng: 16.9994663 }, end: { lat: 51.1082687, lng: 17.0376636 }},
+					{ start: { lat: 51.109974, lng: 17.054832 }, end: { lat: 51.156831, lng: 17.140148 }},
+					{ start: { lat: 51.079199, lng: 16.957441 }, end: { lat: 51.102380, lng: 17.017865 }}
+			];
 
       function initMap() {
         google.maps.Circle.prototype.contains = function(latLng) {
@@ -67,53 +75,68 @@
 
         directionsService = new google.maps.DirectionsService;
 
-        // sampleRoutes.forEach(function (route, i) {
+        sampleRoutes.forEach(function (route, i) {
+            displayRoute(route.start, route.end, colors[i], i);
+        });
+        // var promises = sampleRoutes.map(function (route, i) {
         //     displayRoute(route.start, route.end, colors[i]);
         // });
-        var promises = sampleRoutes.map(function (route, i) {
-            displayRoute(route.start, route.end, colors[i]);
-        });
 
-        Promise.all(promises)
-        .then(function () {
-            getDriverRouteWaypoints();
-            getIntersectionOfDriverCirclesWithCarpoolerPoints();
-        });
-
-        // setTimeout(function () {
+        // Promise.all(promises)
+        // .then(function (result, error) {
+        //     console.log('result', result)
+        //     console.log('error', error)
         //     getDriverRouteWaypoints();
         //     getIntersectionOfDriverCirclesWithCarpoolerPoints();
-        // }, 1000);
+        // });
+
+        setTimeout(function () {
+            getDriverRouteWaypoints();
+            getIntersectionOfDriverCirclesWithCarpoolerPoints();
+						var ride = {
+							driver: 'User1',
+							riders: ['User2', 'User3'],
+							coordsStart: sampleRoutes[0].start,
+							coordsEnd: sampleRoutes[0].end,
+							// path: polylines[0]
+						};
+						addRide(ride);
+        }, 1000);
       }
 
-      function displayRoute(origin, destination, strokeColor) {
-        return new Promise((resolve, reject) => {
+      function displayRoute(origin, destination, strokeColor, index) {
+        // return new Promise((resolve, reject) => {
+					// console.log('index', index)
             var renderer = new google.maps.DirectionsRenderer({
                 draggable: true,
                 polylineOptions: {
                     strokeColor: strokeColor,
-                    strokeWeight: 3
+                    strokeWeight: index == 0 ? 8 : 3
                 },
                 map: map
             });
 
             directionsService.route({
-            origin: new google.maps.LatLng(origin),
-            destination: new google.maps.LatLng(destination),
-            // waypoints: [{location: 'plac Orląt Lwowskich, Wrocław'}, {location: 'Kazimierza Wielkiego, Wrocław'}],
-            travelMode: 'DRIVING',
-            avoidTolls: true
+                origin: new google.maps.LatLng(origin),
+                destination: new google.maps.LatLng(destination),
+                // waypoints: [{location: 'plac Orląt Lwowskich, Wrocław'}, {location: 'Kazimierza Wielkiego, Wrocław'}],
+                travelMode: 'DRIVING',
+                avoidTolls: true
             }, function(response, status) {
-            if (status === 'OK') {
-                renderer.setDirections(response);
-                createPolyline(response);
-                resolve(true);
-            } else {
-                alert('Could not display directions due to: ' + status);
-                reject(false);
-            }
+                if (status === 'OK') {
+                    console.log('response', response)
+                    renderer.setDirections(response);
+                    // createPolyline(response);
+                    // resolve(function () {
+                    //     console.log('resolveed')
+                    //     createPolyline(response);
+                    // });
+                } else {
+                    alert('Could not display directions due to: ' + status);
+                    // reject(false);
+                }
             });
-        });
+        // });
       }
 
       function drawCircle (lat, lng) {
@@ -134,15 +157,15 @@
             circles.push(circle);
       }
 
-      function createPolyline (request) {
+      function createPolyline (response) {
         var bounds = new google.maps.LatLngBounds();
         var polyline = new google.maps.Polyline({
-            path: [],
+            path: response.routes[0].overview_path,
             strokeColor: "#DD71D8",
             strokeWeight: 8
         });
-        var path = request.routes[0].overview_path;
-        var legs = request.routes[0].legs;
+        var path = response.routes[0].overview_path;
+        var legs = response.routes[0].legs;
 
         for (i = 0; i < legs.length; i++) {
             var steps = legs[i].steps;
@@ -156,10 +179,12 @@
                 }
             }
         }
+
       }
 
       function getDriverRouteWaypoints() {
           var driverRoute = polylines[0];
+        //   console.log('driverRoute', driverRoute)
           var coords = [];
           
            for (var i = 0; i < driverRoute.getPath().getLength(); i++) {
@@ -210,38 +235,38 @@
 
       }
 
-
+      
 
       
 
-    //   function save_waypoints() {
-    //       var w=[],wp;
-    //       var rleg = directionsDisplay.directions.routes[0].legs[0];
-    //       data.start = {'lat': rleg.start_location.lat(), 'lng':rleg.start_location.lng()}
-    //       data.end = {'lat': rleg.end_location.lat(), 'lng':rleg.end_location.lng()}
-    //       var wp = rleg.via_waypoints 
-    //       for(var i=0;i<wp.length;i++)w[i] = [wp[i].lat(),wp[i].lng()] 
-    //       data.waypoints = w;
-    //        
-    //       var str = JSON.stringify(data)
-    //    
-    //       // $http.post('url', {data: str});
-    //   }
+      function save_waypoints() {
+          var w=[],wp;
+          var rleg = directionsDisplay.directions.routes[0].legs[0];
+          data.start = {'lat': rleg.start_location.lat(), 'lng':rleg.start_location.lng()}
+          data.end = {'lat': rleg.end_location.lat(), 'lng':rleg.end_location.lng()}
+          var wp = rleg.via_waypoints 
+          for(var i=0;i<wp.length;i++)w[i] = [wp[i].lat(),wp[i].lng()] 
+          data.waypoints = w;
+           
+          var str = JSON.stringify(data)
+       
+          // $http.post('url', {data: str});
+      }
 
-    //   function set_route_from_waypoints (os) {
-    //       var os = os || $http.get('url').then(function (data) { return data });
+      function set_route_from_waypoints (os) {
+          var os = os || $http.get('url').then(function (data) { return data });
 
-    //       var wp = [];
-    //       for(var i=0;i<os.waypoints.length;i++)
-    //           wp[i] = {'location': new google.maps.LatLng(os.waypoints[i][0], os.waypoints[i][1]),'stopover':false }
+          var wp = [];
+          for(var i=0;i<os.waypoints.length;i++)
+              wp[i] = {'location': new google.maps.LatLng(os.waypoints[i][0], os.waypoints[i][1]),'stopover':false }
               
-    //       directionsService.route({'origin':new google.maps.LatLng(os.start.lat,os.start.lng),
-    //       'destination':new google.maps.LatLng(os.end.lat,os.end.lng),
-    //       'waypoints': wp,
-    //       'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
-    //           if(sts=='OK')ren.setDirections(res);
-    //       }) 
-    //   }
+          directionsService.route({'origin':new google.maps.LatLng(os.start.lat,os.start.lng),
+          'destination':new google.maps.LatLng(os.end.lat,os.end.lng),
+          'waypoints': wp,
+          'travelMode': google.maps.DirectionsTravelMode.DRIVING},function(res,sts) {
+              if(sts=='OK')ren.setDirections(res);
+          }) 
+      }
 
 
     </script>

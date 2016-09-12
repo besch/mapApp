@@ -1,0 +1,24 @@
+
+users
+    (userId)
+        email
+        name
+        uid
+        rides
+            (rideId)
+                
+
+
+
+
+rides
+    (rideId)
+        driver: (userId)
+        riders
+            (userId)
+        dateTimeStart
+        dateTimeEnd
+        startCoords
+        endCoords
+        path
+
